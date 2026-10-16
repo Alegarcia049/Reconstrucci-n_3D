@@ -1,0 +1,6 @@
+numpy
+opencv-contrib-python>=4.8
+matplotlib
+open3d
+nbformat
+-e ./i308-calib
