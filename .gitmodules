@@ -1,0 +1,3 @@
+[submodule "i308-calib"]
+	path = i308-calib
+	url = git@github.com:udesa-vision/i308-calib.git
