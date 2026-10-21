@@ -1,6 +1,9 @@
 import cv2
 import matplotlib.pyplot as plt
 import numpy as np
+import open3d as o3d
+
+from src.pose import world_from_rectified
 
 
 def plot_epipolar_pair(left, right, n_lines: int = 8) -> None:
@@ -32,6 +35,7 @@ def plot_disparity(disparity: np.ndarray, min_disparity: int) -> None:
 def plot_pointcloud(points: np.ndarray, colors: np.ndarray, max_points: int) -> None:
     step = max(1, int(np.ceil(len(points) / max_points)))
     sampled_points = points[::step]
+    # Matplotlib espera colores RGB normalizados entre 0 y 1.
     sampled_colors = colors[::step] / 255.0
 
     fig = plt.figure(figsize=(9, 7))
@@ -48,6 +52,7 @@ def plot_pose(image, pose, K, dist, axis_length_mm, T_world_board) -> None:
     T_camera_board = np.eye(4)
     T_camera_board[:3, :3] = R
     T_camera_board[:3, 3] = pose.tvec.reshape(3)
+    # PnP da tablero -> cámara, componemos la pose de mundo -> cámara.
     T_camera_world = T_camera_board @ np.linalg.inv(T_world_board)
     rvec_world, _ = cv2.Rodrigues(T_camera_world[:3, :3])
     cv2.drawFrameAxes(
@@ -56,16 +61,15 @@ def plot_pose(image, pose, K, dist, axis_length_mm, T_world_board) -> None:
 
     fig, ax = plt.subplots(figsize=(10, 6))
     ax.imshow(cv2.cvtColor(result, cv2.COLOR_BGR2RGB))
-    ax.set_title(f"Pose del tablero (RMSE: {pose.rmse:.2f} px)")
+    ax.set_title(f"Pose del tablero (RMSE de la pose: {pose.rmse:.2f} px)")
     ax.axis("off")
     plt.show()
 
 
 def show_world_cloud(cloud, camera_transforms, axis_size_mm: float) -> None:
-    import open3d as o3d
-
     world_axes = o3d.geometry.TriangleMesh.create_coordinate_frame(size=axis_size_mm)
     camera_axes = o3d.geometry.TriangleMesh.create_coordinate_frame(size=axis_size_mm)
+    # Se muestran los ejes de la primera cámara y la trayectoria completa.
     camera_axes.transform(camera_transforms[0])
 
     centers = [T[:3, 3] for T in camera_transforms]
@@ -91,8 +95,6 @@ def plot_camera_poses(
     frustum_depth_mm=90.0,
 ):
     """Dibuja cámaras, tablero y nube en el marco global Z positivo."""
-    from src.pose import world_from_rectified
-
     fig = plt.figure(figsize=(11, 8))
     ax = fig.add_subplot(111, projection="3d")
 
@@ -158,11 +160,9 @@ def camera_poses_mesh(
     axis_length_mm,
 ):
     """Cámaras rectificadas y tablero como malla 3D exportable a PLY."""
-    import open3d as o3d
-    from src.pose import world_from_rectified
-
     mesh = o3d.geometry.TriangleMesh()
 
+    # Cada arista se representa con un cilindro orientado entre sus extremos.
     def segment(a, b, color):
         a, b = np.asarray(a, float), np.asarray(b, float)
         vector = b - a
@@ -229,10 +229,11 @@ def plot_measurement(cloud, bbox):
         alpha=1.0, depthshade=False, linewidths=0,
     )
 
-    # Vértices y 12 aristas de la caja de medición.
+    # Vértices y 12 aristas de la caja de medición orientados
     signs = np.array([[x, y, z] for x in (-0.5, 0.5)
                       for y in (-0.5, 0.5) for z in (-0.5, 0.5)])
     corners = (signs * bbox.extent) @ bbox.R.T + bbox.center
+    # El XOR cambia un eje por vez y evita repetir aristas.
     for i in range(8):
         for bit in (1, 2, 4):
             j = i ^ bit

@@ -44,7 +44,7 @@ def measure_object(
     low, high = np.percentile(
         coordinates, [trim_percent, 100 - trim_percent], axis=0
     )
-    low[2] = 0.0  # Plano de apoyo conocido; la segmentación recortó la suela.
+    low[2] = 0.0  # Plano de apoyo conocido, la segmentación recorta la suela.
 
     extent = high - low
     center = rotation @ ((low + high) / 2)

@@ -4,9 +4,9 @@ import numpy as np
 from src.pose import world_from_rectified
 
 
-def epipolar_vertical_errors(left_corners, left_ids, right_corners, right_ids,
-                             calibration, maps):
+def epipolar_vertical_errors(left_corners, left_ids, right_corners, right_ids, calibration, maps):
     """Residuos firmados v_L - v_R para esquinas ChArUco con IDs compartidos."""
+    # Asociar esquinas por ID, no por orden de detección.
     left_by_id = dict(zip(left_ids.ravel(), left_corners.reshape(-1, 2)))
     right_by_id = dict(zip(right_ids.ravel(), right_corners.reshape(-1, 2)))
     shared_ids = sorted(left_by_id.keys() & right_by_id.keys())
@@ -28,13 +28,13 @@ def epipolar_vertical_errors(left_corners, left_ids, right_corners, right_ids,
     return left_rect[:, 0, 1] - right_rect[:, 0, 1]
 
 
-def board_stereo_errors(disparity, pose, board, calibration, maps,
-                        T_world_board, min_disparity, patch_radius=2):
+def board_stereo_errors(disparity, pose, board, calibration, maps, T_world_board, min_disparity, patch_radius=2):
     """Residuos de disparidad y de altura respecto de Z_w=0 para esquinas ChArUco.
 
     La mediana de un parche evita consultar una única disparidad sobre una esquina.
     Los errores se condicionan a las esquinas para las cuales hay disparidad válida.
     """
+    # Tablero -> cámara izquierda -> cámara rectificada.
     board_xyz = board.getChessboardCorners()[pose.ids.ravel()]
     R, _ = cv2.Rodrigues(pose.rvec)
     camera_xyz = board_xyz @ R.T + pose.tvec.reshape(3)
@@ -57,6 +57,7 @@ def board_stereo_errors(disparity, pose, board, calibration, maps,
         x, y = int(round(u)), int(round(v))
         if not (0 <= x < width and 0 <= y < height):
             continue
+        # Mediana local para reducir el efecto de disparidades aisladas.
         patch = disparity[
             max(0, y - patch_radius): min(height, y + patch_radius + 1),
             max(0, x - patch_radius): min(width, x + patch_radius + 1),

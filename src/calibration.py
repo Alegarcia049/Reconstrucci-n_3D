@@ -5,7 +5,6 @@ import cv2
 
 
 def load_calibration(calibration_path: Path, maps_path: Path) -> tuple[dict, dict]:
-    # Los archivos deben provenir de una fuente confiable.
     with calibration_path.open('rb') as f:
         calibration = pickle.load(f)
 
