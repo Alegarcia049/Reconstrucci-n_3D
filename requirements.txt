@@ -4,3 +4,5 @@ matplotlib
 open3d
 nbformat
 scipy
+onnxruntime
+jupyter
